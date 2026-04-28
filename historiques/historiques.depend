@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1777381770 source:c:\users\hp\desktop\projet-gestion-fnance\historiques\main.c
+	<stdio.h>
+	<stdlib.h>
+	<time.h>
+
