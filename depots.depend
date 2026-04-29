@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1777377994 source:c:\users\hp\desktop\projet-gestion-finance\main..c
+	<stdio.h>
+	<stdlib.h>
+
+1777378015 source:c:\users\hp\desktop\projet-gestion-finance\main.c
+	<stdio.h>
+	<stdlib.h>
+
