@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+/* ========== VARIABLES ========== */
 float solde = 0.0;
 
 #define ID_BTN_DEPOT       1
@@ -14,16 +15,18 @@ float solde = 0.0;
 #define ID_LIST_HISTORIQUE 7
 
 HWND hSolde, hMontant, hMsg, hList;
-HWND hBtnDepot, hBtnRetrait, hBtnQuitter;
 HFONT hFontTitre, hFontNormal, hFontSolde;
-WNDPROC wpOrigDepot, wpOrigRetrait, wpOrigQuitter;
 
-#define CLR_BG      RGB(30, 30, 50)
-#define CLR_PANEL   RGB(45, 45, 70)
-#define CLR_TEXTE   RGB(255, 255, 255)
-#define CLR_SOLDE   RGB(241, 196, 15)
-#define CLR_MSG_OK  RGB(39, 174, 96)
-#define CLR_MSG_ERR RGB(231, 76, 60)
+/* ========== COULEURS ========== */
+#define CLR_BG        RGB(30, 30, 50)
+#define CLR_PANEL     RGB(45, 45, 70)
+#define CLR_VERT      RGB(39, 174, 96)
+#define CLR_ROUGE     RGB(192, 57, 43)
+#define CLR_GRIS      RGB(100, 100, 120)
+#define CLR_TEXTE     RGB(255, 255, 255)
+#define CLR_SOLDE     RGB(241, 196, 15)
+#define CLR_MSG_OK    RGB(39, 174, 96)
+#define CLR_MSG_ERR   RGB(231, 76, 60)
 
 COLORREF couleur_msg = RGB(255,255,255);
 
@@ -112,62 +115,30 @@ void faire_retrait() {
     charger_historique_list();
 }
 
-/* ========== SOUS-CLASSEMENT BOUTONS ========== */
-LRESULT CALLBACK BtnDepotProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_PAINT) {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        HBRUSH hBrush = CreateSolidBrush(RGB(39, 174, 96));
-        FillRect(hdc, &rc, hBrush);
-        DeleteObject(hBrush);
-        SetTextColor(hdc, RGB(255,255,255));
-        SetBkMode(hdc, TRANSPARENT);
-        SelectObject(hdc, hFontNormal);
-        DrawText(hdc, "Deposer", -1, &rc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    return CallWindowProc(wpOrigDepot, hwnd, msg, wParam, lParam);
-}
+/* ========== DESSIN BOUTONS COLORES ========== */
+void dessiner_bouton(DRAWITEMSTRUCT *dis, COLORREF couleur, const char *texte) {
+    HDC hdc = dis->hDC;
+    RECT rc = dis->rcItem;
 
-LRESULT CALLBACK BtnRetraitProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_PAINT) {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        HBRUSH hBrush = CreateSolidBrush(RGB(192, 57, 43));
-        FillRect(hdc, &rc, hBrush);
-        DeleteObject(hBrush);
-        SetTextColor(hdc, RGB(255,255,255));
-        SetBkMode(hdc, TRANSPARENT);
-        SelectObject(hdc, hFontNormal);
-        DrawText(hdc, "Retirer", -1, &rc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    return CallWindowProc(wpOrigRetrait, hwnd, msg, wParam, lParam);
-}
+    COLORREF clr = (dis->itemState & ODS_SELECTED) ? RGB(
+        (BYTE)(GetRValue(couleur) * 0.7),
+        (BYTE)(GetGValue(couleur) * 0.7),
+        (BYTE)(GetBValue(couleur) * 0.7)
+    ) : couleur;
 
-LRESULT CALLBACK BtnQuitterProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    if (msg == WM_PAINT) {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        HBRUSH hBrush = CreateSolidBrush(RGB(100, 100, 120));
-        FillRect(hdc, &rc, hBrush);
-        DeleteObject(hBrush);
-        SetTextColor(hdc, RGB(255,255,255));
-        SetBkMode(hdc, TRANSPARENT);
-        SelectObject(hdc, hFontNormal);
-        DrawText(hdc, "Quitter", -1, &rc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    return CallWindowProc(wpOrigQuitter, hwnd, msg, wParam, lParam);
+    HBRUSH hBrush = CreateSolidBrush(clr);
+    FillRect(hdc, &rc, hBrush);
+    DeleteObject(hBrush);
+
+    HPEN hPen = CreatePen(PS_SOLID, 1, RGB(255,255,255));
+    SelectObject(hdc, hPen);
+    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 10, 10);
+    DeleteObject(hPen);
+
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, CLR_TEXTE);
+    SelectObject(hdc, hFontNormal);
+    DrawText(hdc, texte, -1, &rc, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 /* ========== PROCEDURE FENETRE ========== */
@@ -183,56 +154,49 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                             DEFAULT_CHARSET, 0, 0, 0, 0, "Segoe UI");
 
             HWND hTitre = CreateWindow("STATIC", "GESTION FINANCIERE",
-                WS_VISIBLE|WS_CHILD|SS_CENTER,
+                WS_VISIBLE | WS_CHILD | SS_CENTER,
                 0, 15, 520, 30, hwnd, NULL, NULL, NULL);
             SendMessage(hTitre, WM_SETFONT, (WPARAM)hFontTitre, TRUE);
 
             hSolde = CreateWindow("STATIC", "Solde actuel : 0.00 FCFA",
-                WS_VISIBLE|WS_CHILD|SS_CENTER,
+                WS_VISIBLE | WS_CHILD | SS_CENTER,
                 50, 55, 420, 28, hwnd, (HMENU)ID_STATIC_SOLDE, NULL, NULL);
             SendMessage(hSolde, WM_SETFONT, (WPARAM)hFontSolde, TRUE);
 
             HWND hLabel = CreateWindow("STATIC", "Montant (FCFA) :",
-                WS_VISIBLE|WS_CHILD,
+                WS_VISIBLE | WS_CHILD,
                 50, 103, 150, 22, hwnd, NULL, NULL, NULL);
             SendMessage(hLabel, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
             hMontant = CreateWindow("EDIT", "",
-                WS_VISIBLE|WS_CHILD|WS_BORDER|ES_NUMBER,
+                WS_VISIBLE | WS_CHILD | WS_BORDER | ES_NUMBER,
                 200, 100, 170, 26, hwnd, (HMENU)ID_EDIT_MONTANT, NULL, NULL);
             SendMessage(hMontant, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
-            hBtnDepot = CreateWindow("BUTTON", "Deposer",
-                WS_VISIBLE|WS_CHILD|BS_PUSHBUTTON,
+            CreateWindow("BUTTON", "Deposer",
+                WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                 50, 145, 130, 38, hwnd, (HMENU)ID_BTN_DEPOT, NULL, NULL);
-            SendMessage(hBtnDepot, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
-            hBtnRetrait = CreateWindow("BUTTON", "Retirer",
-                WS_VISIBLE|WS_CHILD|BS_PUSHBUTTON,
+            CreateWindow("BUTTON", "Retirer",
+                WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                 195, 145, 130, 38, hwnd, (HMENU)ID_BTN_RETRAIT, NULL, NULL);
-            SendMessage(hBtnRetrait, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
-            hBtnQuitter = CreateWindow("BUTTON", "Quitter",
-                WS_VISIBLE|WS_CHILD|BS_PUSHBUTTON,
+            CreateWindow("BUTTON", "Quitter",
+                WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                 340, 145, 130, 38, hwnd, (HMENU)ID_BTN_QUITTER, NULL, NULL);
-            SendMessage(hBtnQuitter, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
-            /* Sous-classement pour couleurs */
-            wpOrigDepot   = (WNDPROC)SetWindowLongPtr(hBtnDepot,   GWLP_WNDPROC, (LONG_PTR)BtnDepotProc);
-            wpOrigRetrait = (WNDPROC)SetWindowLongPtr(hBtnRetrait, GWLP_WNDPROC, (LONG_PTR)BtnRetraitProc);
-            wpOrigQuitter = (WNDPROC)SetWindowLongPtr(hBtnQuitter, GWLP_WNDPROC, (LONG_PTR)BtnQuitterProc);
             hMsg = CreateWindow("STATIC", "",
-                WS_VISIBLE|WS_CHILD|SS_CENTER,
+                WS_VISIBLE | WS_CHILD | SS_CENTER,
                 50, 195, 420, 22, hwnd, (HMENU)ID_STATIC_MSG, NULL, NULL);
             SendMessage(hMsg, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
             HWND hLblHist = CreateWindow("STATIC", "Historique des transactions :",
-                WS_VISIBLE|WS_CHILD,
+                WS_VISIBLE | WS_CHILD,
                 50, 225, 300, 20, hwnd, NULL, NULL, NULL);
             SendMessage(hLblHist, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
             hList = CreateWindow("LISTBOX", NULL,
-                WS_VISIBLE|WS_CHILD|WS_BORDER|WS_VSCROLL|LBS_NOTIFY,
+                WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | LBS_NOTIFY,
                 50, 250, 420, 180, hwnd, (HMENU)ID_LIST_HISTORIQUE, NULL, NULL);
             SendMessage(hList, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
 
@@ -245,12 +209,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             HDC hdc = (HDC)wParam;
             HWND hCtrl = (HWND)lParam;
             SetBkMode(hdc, TRANSPARENT);
-            if (hCtrl == hSolde)
+            if (hCtrl == hSolde) {
                 SetTextColor(hdc, CLR_SOLDE);
-            else if (hCtrl == hMsg)
+            } else if (hCtrl == hMsg) {
                 SetTextColor(hdc, couleur_msg);
-            else
+            } else {
                 SetTextColor(hdc, CLR_TEXTE);
+            }
             return (LRESULT)CreateSolidBrush(CLR_BG);
         }
 
@@ -266,6 +231,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             SetBkColor(hdc, CLR_PANEL);
             SetTextColor(hdc, CLR_TEXTE);
             return (LRESULT)CreateSolidBrush(CLR_PANEL);
+        }
+
+        case WM_DRAWITEM: {
+            DRAWITEMSTRUCT *dis = (DRAWITEMSTRUCT*)lParam;
+            switch(dis->CtlID) {
+                case ID_BTN_DEPOT:   dessiner_bouton(dis, CLR_VERT,  "Deposer"); break;
+                case ID_BTN_RETRAIT: dessiner_bouton(dis, CLR_ROUGE, "Retirer"); break;
+                case ID_BTN_QUITTER: dessiner_bouton(dis, CLR_GRIS,  "Quitter"); break;
+            }
+            return TRUE;
         }
 
         case WM_ERASEBKGND: {

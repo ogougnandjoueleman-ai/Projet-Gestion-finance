@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1779262634 source:c:\users\hp\onedrive\desktop\projet-gestion-finance\gestion_financiere\main.c
+	<windows.h>
+	<stdio.h>
+	<stdlib.h>
+	<time.h>
+
+1779261320 source:c:\users\hp\onedrive\desktop\projet-gestion-finance\gestion_financiere\main.cpp.c
+	<windows.h>
+	<stdio.h>
+	<stdlib.h>
+	<time.h>
+
